@@ -721,6 +721,12 @@ def main():
         help="DEPRECATED.  Retained only for backward compatibility. This option has no effect.",
     )
 
+    parser.add_option(
+        "--disable-prompt-change",
+        action="store_true",
+        help="The generated environment will not try and change the prompt.",
+    )
+
     if "extend_parser" in globals():
         # noinspection PyUnresolvedReferences
         extend_parser(parser)  # noqa: F821
@@ -829,6 +835,7 @@ def main():
             no_pip=options.no_pip,
             no_wheel=options.no_wheel,
             symlink=options.symlink,
+            disable_prompt_change=options.disable_prompt_change
         )
     if "after_install" in globals():
         # noinspection PyUnresolvedReferences
@@ -1090,6 +1097,7 @@ def create_environment(
     no_pip=False,
     no_wheel=False,
     symlink=True,
+    disable_prompt_change=False
 ):
     """
     Creates a new environment in ``home_dir``.
@@ -1122,7 +1130,7 @@ def create_environment(
     if to_install:
         install_wheel(to_install, py_executable, search_dirs, download=download)
 
-    install_activate(home_dir, bin_dir, prompt)
+    install_activate(home_dir, bin_dir, prompt, disable_prompt_change)
 
     install_python_config(home_dir, bin_dir, prompt)
 
@@ -1673,7 +1681,13 @@ def install_python(home_dir, lib_dir, inc_dir, bin_dir, site_packages, clear, sy
     return py_executable
 
 
-def install_activate(home_dir, bin_dir, prompt=None):
+def install_activate(home_dir, bin_dir, prompt=None, disable_prompt_change=False):
+
+    # Checking whether we should disable the prompt change for this environment specifically
+    placeholder = "# FORCE_DISABLE_PROMPT"
+    win_placeholder = "REM FORCE_DISABLE_PROMPT"
+    
+
     if IS_WIN:
         files = {"activate.bat": ACTIVATE_BAT, "deactivate.bat": DEACTIVATE_BAT, "activate.ps1": ACTIVATE_PS}
 
@@ -1700,13 +1714,17 @@ def install_activate(home_dir, bin_dir, prompt=None):
         # Add xonsh support
         files["activate.xsh"] = ACTIVATE_XSH
 
-    install_files(home_dir, bin_dir, prompt, files)
+    install_files(home_dir, bin_dir, prompt, files, disable_prompt_change)
 
 
-def install_files(home_dir, bin_dir, prompt, files):
+def install_files(home_dir, bin_dir, prompt, files, disable_prompt_change=False):
     if hasattr(home_dir, "decode"):
         home_dir = home_dir.decode(sys.getfilesystemencoding())
     virtualenv_name = os.path.basename(home_dir)
+    if disable_prompt_change:
+        flagfile = os.path.join(home_dir, ".nopromptchange")
+        with open(flagfile, 'a'):
+            os.utime(flagfile, None)
     for name, content in files.items():
         content = content.replace("__VIRTUAL_PROMPT__", prompt or "")
         content = content.replace("__VIRTUAL_WINPROMPT__", prompt or "({}) ".format(virtualenv_name))
@@ -2248,20 +2266,21 @@ DFVPDhmDAiVyzTGUonQ9edEj7VRYQ9H7X+4V6Ls=
 # file activate.sh
 ACTIVATE_SH = convert(
     """
-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
+eJytVe9T2kAQ/Z6/Yg2MVVtk6Md2cIqVGZxRcAyl09ZOPJONuTFcmLsLij/+9+4lISRE6AflA5Ds
+u7u3u+/tNWAccgUBjxCmidJwg5Ao9OGe6xBsFSfSQ7jhos08zedMow0HgYyncMNUeGA1YBEn4DEh
+Yg0yEcA1+Fyip6OFZfm4XAV7+/BkAX0SoVBDK4DZwo89OGr7OG+LJIrg89Fux0oxDZBoUHHkA4o5
+l7GYotAwZ5KzmwhVjtqBP9B6hObTpHf50X2Bv7ROJ1Io0DJB4AFQACg/H72ISUqLaWBRlC6naL7e
+bj65o7MTd3J6Of7RO3MveuMBbWfTfl9BhyhSvPmYSNdu1tB2gcCHWSx1CizeZSnXFqXxgP+PzK/x
+YDQcjM77GygV8RqxIlKnV4S2kqyiiGpe91QzKowT6o+PmrqdygGY8OFRhZ/gPuReCCGbIzD6oZAX
+T6cmrENqgVFavhXpzaOOUGt0DLfEgARE/4JYmocZI0nmS9UhwE9SZZzoPKy5uM23qQBNgaBpSgxe
+yMQtKrgneTPffC3ASJWOJYnNiDn6ywZQ+YUp/3HPGbTSUj8/Fy9/OwN30r90TkfD1mttSJNsSRJx
+IehK0bY02Ols6KzTqbXU6dR76XS2NjEPL4lkkGW0P5ys0t8x3DomvS7YIhY+KvKRcTCu0WuAg1EA
+S8DOGoGWCS2tvzz9xaJpkcW5lBjhnFUsXRoW1bMtq8S2a7tu6dF1bSuvQzklq2Y2qmRm1PyhhG67
+7vHp0B32zvuu+yWHlX1c8F4ZwhSM3liVtm6z6gZjGVprNl0/yjKda8D3EL07Erw52eg7iNhtOrbJ
+LT5XpoYwo8E804aYsQYJhCutrEzagRmTq6Rf2ocizvCZR6p0yyU+OXV6x2d99+JydH4x7nZSQtmm
+adqbsTWnrCuza6rmGMmtVGg/rDqcbUNNhp0uPGywSB1e2RQjhdUFe9c0rVCwKcJVRQlX9vU+VBbn
+47lktawb5+wOQSUyLX8iWMSZym80SoLrD4ruGYnMXxjCEq0yojQjyvff7u7aTjR+zD1mWdljcYXO
+FjQFBbSmOc5ufrMze73LYH6HofzGgfyWYfzaIKae/QN8C6a2
 """
 )
 
@@ -2293,17 +2312,18 @@ a6FOZy1jZzukdvvqN1kPccDLjbwGdtJ8m72rgeki+xOnXcf/CzFcuJM=
 # file activate.csh
 ACTIVATE_CSH = convert(
     """
-eJx9VNtO4zAQffdXDKEiUEFhX8t22bJFWqRyEVuQVkKy3Hi6sZQ44Dit+sK379hJittG5KGqPZdz
-fOZyCLNUlbBQGUJelRbmCFWJElbKphCVRWUShLnS5yKxaiksDpIyjaC/MEUO9Lc/YIfwt6ggEVoX
-FkylQVmQymBis7Wz/jJIcRLma5iIpZIIEwXXmSgVfJf+Qs5//suFygZJkf8YMFaiBY2rTGkcxa8s
-ZkxkSpQgsWUBsUVi27viD9MJf7l9mj2Pp/xxPPsNByO4gKMjoCSol+Dvot6e3/A9cl6VdmB71ksw
-mIoyvYROnKeHu8dZiARvpMebHe0CeccvoLz9sjY5tq3h5v6lgY5eD4b9yGFFutCSrkzlRMAm554y
-we3bWhYJqXcIzx5bGYMZLoW2sBRGiXmG5YAFsdsIvhA7rCDiPDhyHtXl2lOQpGhkZtuVCKKH7+ec
-X9/e8/vx3Q3nw00EfWoBxwFWrRTBeSWiE7Apagb0OXRKz7XIEUbQFcMwK7HLOT6OtwlZQo9PIGao
-pVrULKj64Ysnt3/G19ObtgkCJrXzF74jRz2MaCnJgtcN5B7wLfK2DedOp4vGydPcet5urq2XBEZv
-DcnQpBZVJt0KUBqEa4YzpS0a3x7odFOm0Dlqe9oEkN8qVUlK01/iKfSa3LRRKmqkBc2vBKFpmyCs
-XG4d2yYyEQZBzIvKOgLN+JDveiVoaXyqedVYOkTrmCRqutrfNVHr6xMFBhh9QD/qNQuGLvq72d03
-3Jy2CtGCf0rca/tp+N4BXqsflKquRr0L2sjmuClOu+/8/NKvTQsNZ3l9ZqxeTew//1a6EA==
+eJx9VF1P4zAQfPevWEJFoILCvZbr9coV6ZDKh7iCdBKS5SYbYilxwHFa9eV++62dpLht1DxUtXd3
+ZjK72WOYp7KERGYIeVUaWCBUJcawkiaFoCwqHSEspLoUkZFLYXAQlWkA/UQXOdDf/oAdw9+igkgo
+VRjQlQJpIJYaI5OtbfSXRqqLYbGGqVjKGGEq4SYTpYTvsbuIFz/fcyGzQVTkPwaMlWhA4SqTCkfh
+GwsZE5kUJcTYqoDQIKntjfnjbMpf757nL5MZf5rMf8PRCK7g5AQIBNUS3F3Q28sbfgY2q1KWbC96
+DRpTUabX0Mnz/Hj/NPeZ4IP8+DCjXSKXeIDKxa/rkFXbBm4fXhvq4O1o2A8sV6AKFdOVrqwJ2GDu
+OePdfqzjIiL3juHFcUutMcOlUAaWQkuxyLAcMK92m8E1YkcVBJx7R86Dul17DpIVjc1suxNe9fDz
+kvObuwf+MLm/5Xy4qaBHJnDqcdVOEZ1zIjgDk6JiQI9lJ3iuRI4wgq4ahlmJXcnhabgtyBB7eAYh
+QxXLxDo3laX1qWkwRKlQ7wikLsnEe/3h0AdEuE4xXCTgA14OVFFXNoU7wn0rp3d/Jjez23a66FW+
+Ba0Oh90bH0j3gOvkQ9DWQr+ilRMXvHnPmt3eb7zrTLpqkpzMLZt3sbbexAu6qC+GNkZRZbFdRVKB
+sEN5IZVB7cYUbf+kLlSOypw3BZS3SmWU0hYq8Rx6DTY1pqKBTmiPxCAUbTWElcVWoWkqI6ERxKKo
+jBXQdlmo9UrQ8vpyc9xEOkzr+KJp+Ot8O8xtrgPyAjD6B/2g1yw6uujvottnuDltNaIl/7K41871
+8LODvHbfa1XdjXontZXNcdOcdu+6PUK/Ji0UXOT1mbF6RbL/jbLkEA==
 """
 )
 

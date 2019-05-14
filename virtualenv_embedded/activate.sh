@@ -53,6 +53,11 @@ if ! [ -z "${PYTHONHOME+_}" ] ; then
     unset PYTHONHOME
 fi
 
+# Checking if the flagfile to disable prompt setting exists
+if [ -f ${VIRTUAL_ENV}/.nopromptchange ] ; then
+    VIRTUAL_ENV_DISABLE_PROMPT=1
+fi
+
 if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT-}" ] ; then
     _OLD_VIRTUAL_PS1="${PS1-}"
     if [ "x__VIRTUAL_PROMPT__" != x ] ; then

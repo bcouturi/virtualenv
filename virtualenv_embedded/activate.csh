@@ -23,6 +23,11 @@ else
     set env_name = '('"$VIRTUAL_ENV:t:q"') '
 endif
 
+# Disable prompt change if flag file is set
+if ( -f $VIRTUAL_ENV/.nopromptchange ) then
+    set VIRTUAL_ENV_DISABLE_PROMPT = "1"
+endif
+
 if ( $?VIRTUAL_ENV_DISABLE_PROMPT ) then
     if ( $VIRTUAL_ENV_DISABLE_PROMPT == "" ) then
         set do_prompt = "1"
